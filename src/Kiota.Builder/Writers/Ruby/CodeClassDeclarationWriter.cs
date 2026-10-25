@@ -1,0 +1,75 @@
+﻿using System;
+using System.Linq;
+
+using Kiota.Builder.CodeDOM;
+using Kiota.Builder.Extensions;
+using Kiota.Builder.PathSegmenters;
+
+namespace Kiota.Builder.Writers.Ruby;
+
+public class CodeClassDeclarationWriter : BaseElementWriter<ClassDeclaration, RubyConventionService>
+{
+    private readonly RelativeImportManager relativeImportManager;
+    public CodeClassDeclarationWriter(RubyConventionService conventionService, string clientNamespaceName, RubyPathSegmenter pathSegmenter) : base(conventionService)
+    {
+        ArgumentNullException.ThrowIfNull(pathSegmenter);
+        relativeImportManager = new RelativeImportManager(
+                                    clientNamespaceName,
+                                    '.',
+                                    pathSegmenter.GetRelativeFileName);
+    }
+
+
+    public override void WriteCodeElement(ClassDeclaration codeElement, LanguageWriter writer)
+    {
+        ArgumentNullException.ThrowIfNull(codeElement);
+        ArgumentNullException.ThrowIfNull(writer);
+        var currentNamespace = codeElement.GetImmediateParentOfType<CodeNamespace>();
+        if (codeElement.Parent?.Parent is not CodeClass)
+        {
+            var requires = codeElement.Usings
+                                        .Where(static x => x.IsExternal)
+                                        .Select(static x => x.Declaration?.Name?.ToSnakeCase())
+                                        .Where(static x => !string.IsNullOrEmpty(x))
+                                        .GroupBy(static x => x)
+                                        .Select(static x => x.Key)
+                                        .Order(StringComparer.OrdinalIgnoreCase)
+                                        .Select(static x => $"require {RubyConventionService.ToRubyStringLiteral(x)}")
+                                        .Concat(codeElement.Usings
+                                        .Where(static x => !x.IsExternal)
+                                        .DistinctBy(static x => $"{x.Name}{x.Declaration?.Name}", StringComparer.OrdinalIgnoreCase)
+                                        .Select(x => x.Declaration?.Name?.StartsWith('.') ?? false ?
+                                            (string.Empty, string.Empty, x.Declaration.Name) :
+                                            relativeImportManager.GetRelativeImportPathForUsing(x, currentNamespace))
+                                        .Select(static x => x.Item3)
+                                        .Distinct()
+                                        .Order(StringComparer.OrdinalIgnoreCase)
+                                        .Select(static x => $"require_relative {RubyConventionService.ToRubyStringLiteral(x.ToSnakeCase())}"))
+                                        .ToArray();
+            writer.WriteLine(RubyConventionService.FrozenStringLiteralComment);
+            if (requires.Length != 0)
+            {
+                writer.WriteLine();
+                writer.WriteLines(requires);
+            }
+        }
+        if (codeElement.Parent?.Parent is CodeClass)
+            RubyConventionService.WriteMemberSeparator(writer);
+        else
+            writer.WriteLine();
+        if (codeElement.Parent?.Parent is CodeNamespace ns)
+        {
+            conventions.WriteNamespaceModules(ns, writer);
+        }
+
+        var derivation = codeElement.Inherits == null ? string.Empty : $" < {conventions.GetQualifiedTypeName(codeElement.Inherits)}";
+        if (codeElement.Parent is CodeClass parentClass)
+            conventions.WriteShortDescription(parentClass, writer);
+        writer.StartBlock($"class {codeElement.Name.ToFirstCharacterUpperCase()}{derivation}");
+        // writing an empty mixin line would leave a blank (indent-only) first line in the class body
+        if (codeElement.Implements.Any())
+            // `include A, B` is `include B` then `include A`, so the order keeps method lookup unchanged
+            foreach (var mixin in codeElement.Implements.Select(static x => x.Name).Reverse())
+                writer.WriteLine($"include {mixin}");
+    }
+}

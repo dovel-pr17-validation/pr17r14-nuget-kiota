@@ -1,0 +1,74 @@
+AllCops:
+  TargetRubyVersion: 3.3
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+# generated lines embed URL templates, qualified constants and API descriptions
+Layout/LineLength:
+  Enabled: false
+
+# class docs come from optional API descriptions; filler comments would be noise
+Style/Documentation:
+  Enabled: false
+
+# module and class names come from the namespace name and API names; renaming them is breaking
+Naming/ClassAndModuleCamelCase:
+  Enabled: false
+
+# the runtime calls get_field_deserializers and get_query_parameter by name
+Naming/AccessorMethodName:
+  Enabled: false
+
+# generated method size tracks the API surface, one line per property, mapping or error code
+Metrics/MethodLength:
+  Enabled: false
+
+# generated method size tracks the API surface, one line per property, mapping or error code
+Metrics/AbcSize:
+  Enabled: false
+
+# enums are CamelCase hash constants that users reference; renaming them is breaking
+Naming/ConstantName:
+  Enabled: false
+
+# is_ and has_ names mirror the API's property names, as in every other Kiota language
+Naming/PredicatePrefix:
+  Enabled: false
+
+# generated class size tracks the API surface
+Metrics/ClassLength:
+  Enabled: false
+
+# generated module size tracks the API surface
+Metrics/ModuleLength:
+  Enabled: false
+
+# Don't raise an error if block is longer than 25 lines. This happens in "spec\defaultvalues\integration_test_defaultvalues.rb"
+Metrics/BlockLength:
+  Enabled: false
+
+# Generated property names may contain letter_digit patterns (e.g. heading_1) from the OpenAPI spec
+Naming/VariableNumber:
+  Enabled: false
+
+# Generated factory methods can have many discriminator branches
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+# Composed type factories, serializers and deserializers branch once per union member,
+# so their complexity tracks the arity of the union rather than any avoidable nesting
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+# one accessor per property, each with its own doc comment
+Style/AccessorGrouping:
+  EnforcedStyle: separated
+
+# descriptions come from the API and may start with prose such as "Note:"
+Style/CommentAnnotation:
+  Enabled: false
